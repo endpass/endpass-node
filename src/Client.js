@@ -1,6 +1,15 @@
 const { OAuth2 } = require('oauth');
-const { OAUTH2_IDENTITY_URL } = require('./constants');
-// PUBLIC_API_BASE_URL
+const { OAUTH2_IDENTITY_URL, PUBLIC_API_BASE_URL } = require('./constants');
+
+/**
+ * Authorization token object which can be recieved with exchange method
+ * @typedef {object} Token
+ * @property {string} accessToken OAuth2 access token
+ * @property {string} refreshToken OAuth2 refresh token
+ * @property {number} expiresIn Access token lifetime in ms
+ * @property {string} tokenType Received token type
+ * @property {string} scope Scopes granted by token
+ */
 
 class Client {
   /**
@@ -18,13 +27,13 @@ class Client {
     scopes,
     redirectUrl,
     state,
-    // publicApiUrl = PUBLIC_API_BASE_URL,
+    publicApiUrl = PUBLIC_API_BASE_URL,
     oauth2BaseUrl = OAUTH2_IDENTITY_URL,
   }) {
     this.state = state;
+    this.publicApiUrl = publicApiUrl;
     this.redirectUrl = redirectUrl;
     this.scopes = scopes;
-
     this.oauth2 = new OAuth2(
       clientId,
       clientSecret,
@@ -34,6 +43,11 @@ class Client {
     );
   }
 
+  /**
+   * Returns url where user can receive authorization code for token
+   * requesting
+   * @returns {string} Authorization URL
+   */
   getAuthUrl() {
     return this.oauth2.getAuthorizeUrl({
       redirect_url: this.redirectUrl,
@@ -44,18 +58,11 @@ class Client {
   }
 
   /**
-   * @param {string} path
-   * @returns {Promise<void>}
-   */
-  request() {
-    // const normalizedPath = path.replace(/^\//, '');
-    // eslint - disable - next - line;
-    // const requestPath = `${this.publicApiUrl}/${normalizedPath}`;
-  }
-
-  /**
+   * Requests authorization token with authorization code
+   * Requested token object includes accessToken field which can be used to
+   * request anything from endpass public API
    * @param {string} code Authorization code
-   * @returns {Promise}
+   * @returns {Promise<Token>} Authorization token object
    */
   exchange(code) {
     return new Promise((resolve, reject) => {
@@ -67,19 +74,77 @@ class Client {
         (err, accessToken, refreshToken, results) => {
           if (err) return reject(err);
 
+          const {
+            expires_in: expiresIn,
+            token_type: tokenType,
+            scope,
+          } = results;
+
           return resolve({
+            expiresIn,
+            scope,
+            tokenType,
             accessToken,
             refreshToken,
-            results,
           });
         },
       );
     });
   }
 
-  // isValidState(state) {
-  //   return state === this.state;
-  // }
+  /**
+   * Request some data from endpass public API endpoint with access token
+   * Also it can pass into request custom Origin header, which allows to
+   * use OAuth2 client in specific environment. For example, on localhost
+   * @example
+   * const res = await c.request({ path: '/user', accessToken: 'access_token' })
+   * // { email: 'example@email.com', phones: [] }
+   * @param {object} params
+   * @param {string} params.path Public API endpoint
+   * @param {string} params.accessToken Access token string
+   * @returns {Promise<object>} Request result
+   */
+  request({ origin, path, accessToken }) {
+    const requestPath = `${this.publicApiUrl}/${path.replace(/^\//, '')}`;
+    const requestHeaders = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    if (origin) {
+      Object.assign(requestHeaders, {
+        Origin: origin,
+      });
+    }
+
+    return new Promise((resolve, reject) => {
+      /**
+       * Using private method because public is not provide ability to change
+       * request headers
+       */
+      this.oauth2._request(
+        'GET',
+        requestPath,
+        requestHeaders,
+        '',
+        null,
+        (err, res) => {
+          if (err) {
+            const { message, code, id } = JSON.parse(err.data);
+            const error = new Error(message);
+
+            return reject(
+              Object.assign(error, {
+                status: code,
+                id,
+              }),
+            );
+          }
+
+          return resolve(JSON.parse(res));
+        },
+      );
+    });
+  }
 }
 
 module.exports = Client;
