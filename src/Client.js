@@ -71,25 +71,56 @@ class Client {
         {
           grant_type: 'authorization_code',
         },
-        (err, accessToken, refreshToken, results) => {
+        (err, ...response) => {
           if (err) return reject(err);
 
-          const {
-            expires_in: expiresIn,
-            token_type: tokenType,
-            scope,
-          } = results;
-
-          return resolve({
-            expiresIn,
-            scope,
-            tokenType,
-            accessToken,
-            refreshToken,
-          });
+          return resolve(this.formatTokenResponse(...response));
         },
       );
     });
+  }
+
+  /**
+   * Refresh authorization token with earlier received refresh token
+   * @param {string} refreshToken Refresh token
+   * @returns {Promise<Token>} Authorization token object
+   */
+  refresh(refreshToken) {
+    return new Promise((resolve, reject) => {
+      this.oauth2.getOAuthAccessToken(
+        refreshToken,
+        {
+          grant_type: 'refresh_token',
+        },
+        (err, ...response) => {
+          if (err) return reject(err);
+
+          return resolve(this.formatTokenResponse(...response));
+        },
+      );
+    });
+  }
+
+  /**
+   * Formats API response to authorization Token object
+   * @param {string} accessToken
+   * @param {string} refreshToken
+   * @param {object} results
+   * @param {string} results.expires_in
+   * @param {number} results.token_type
+   * @param {string} results.scope
+   * @returns {Token} Authorization token object
+   */
+  formatTokenResponse(accessToken, refreshToken, results) {
+    const { expires_in: expiresIn, token_type: tokenType, scope } = results;
+
+    return {
+      expiresIn,
+      scope,
+      tokenType,
+      accessToken,
+      refreshToken,
+    };
   }
 
   /**
@@ -129,15 +160,10 @@ class Client {
         null,
         (err, res) => {
           if (err) {
-            const { message, code, id } = JSON.parse(err.data);
-            const error = new Error(message);
+            const { message, code } = JSON.parse(err.data);
+            const error = new Error(`${code}: ${message}`);
 
-            return reject(
-              Object.assign(error, {
-                status: code,
-                id,
-              }),
-            );
+            return reject(error);
           }
 
           return resolve(JSON.parse(res));

@@ -42,14 +42,22 @@ router.get('/handler', async (req, res, next) => {
 });
 router.get('/request', async (req, res, next) => {
   const accessToken = req.cookies[ENDPASS_ACCESS_TOKEN];
-  // const refreshToken = req.cookies[ENDPASS_REFRESH_TOKEN];
+  const refreshToken = req.cookies[ENDPASS_REFRESH_TOKEN];
 
   try {
     const { email } = await c.request({
+      origin: req.headers.host,
       path: '/user',
       accessToken,
     });
+    const refreshedToken = await c.refresh(refreshToken);
 
+    res.cookie(ENDPASS_ACCESS_TOKEN, refreshedToken.accessToken, {
+      httpOnly: true,
+    });
+    res.cookie(ENDPASS_REFRESH_TOKEN, refreshedToken.refreshToken, {
+      httpOnly: true,
+    });
     res.render('request', {
       title: 'Oauth test app request result',
       email,
