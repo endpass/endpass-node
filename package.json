@@ -40,5 +40,8 @@
     "jest-cli": "^24.8.0",
     "lint-staged": "^9.2.1",
     "prettier": "^1.18.2"
+  },
+  "dependencies": {
+    "oauth": "^0.9.15"
   }
 }
