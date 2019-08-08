@@ -14,35 +14,15 @@ const c = new Client({
   redirectUrl: 'http://localhost:3000/handler',
 });
 
-/* GET home page. */
-router.get('/', (req, res) => {
-  res.render('index', { title: 'Oauth test app' });
-});
-router.get('/auth', (req, res) => {
-  res.redirect(c.getAuthUrl());
-});
-router.get('/handler', async (req, res, next) => {
-  const { code } = req.query;
-
-  try {
-    const { accessToken, refreshToken } = await c.exchange(code);
-
-    res.cookie(ENDPASS_ACCESS_TOKEN, accessToken, {
-      httpOnly: true,
-    });
-    res.cookie(ENDPASS_REFRESH_TOKEN, refreshToken, {
-      httpOnly: true,
-    });
-    res.render('oauth', {
-      title: 'Oauth app handler',
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-router.get('/request', async (req, res, next) => {
+/* eslint-disable-next-line */
+router.get('/', async (req, res, next) => {
   const accessToken = req.cookies[ENDPASS_ACCESS_TOKEN];
   const refreshToken = req.cookies[ENDPASS_REFRESH_TOKEN];
+
+  if (!accessToken && !refreshToken) {
+    res.render('index', { title: 'Oauth test app' });
+    return;
+  }
 
   try {
     const { email } = await c.request({
@@ -58,10 +38,37 @@ router.get('/request', async (req, res, next) => {
     res.cookie(ENDPASS_REFRESH_TOKEN, refreshedToken.refreshToken, {
       httpOnly: true,
     });
-    res.render('request', {
-      title: 'Oauth test app request result',
+    res.render('account', {
       email,
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get('/auth', (req, res) => {
+  res.redirect(c.getAuthUrl());
+});
+
+router.get('/logout', (req, res) => {
+  res.clearCookie(ENDPASS_ACCESS_TOKEN);
+  res.clearCookie(ENDPASS_REFRESH_TOKEN);
+  res.redirect('/');
+});
+
+router.get('/handler', async (req, res, next) => {
+  const { code } = req.query;
+
+  try {
+    const { accessToken, refreshToken } = await c.exchange(code);
+
+    res.cookie(ENDPASS_ACCESS_TOKEN, accessToken, {
+      httpOnly: true,
+    });
+    res.cookie(ENDPASS_REFRESH_TOKEN, refreshToken, {
+      httpOnly: true,
+    });
+    res.redirect('/');
   } catch (err) {
     next(err);
   }

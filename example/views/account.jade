@@ -1,9 +1,8 @@
 extends layout
 
 block content
-  h1= title
-  p Request has succeeded.
+  h1="Endpass account details"
   ul
     li
       | Email: #{email}
-
+  a(href="/logout") Logout
