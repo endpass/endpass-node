@@ -11,7 +11,7 @@ yarn add endpass-node
 Or with `npm`:
 
 ```shell
-npm add endpass-node
+npm i --save endpass-node
 ```
 
 ## Usage
@@ -53,6 +53,24 @@ try {
   // Error handling
 }
 ```
+
+Also, you can create `EndpassRequester` instance for multiple requests with one access token:
+
+```js
+const token = await client.exchange('<authorization_code>');
+const requester = client.createRequester(token.accessToken);
+
+try {
+  const { email } = await requester.request('/user');
+  // ...
+  // There would be profile data
+} catch (err) {
+  // Error handling
+}
+```
+
+In the case abow, your access token will be cached in requester instance. Do not forget
+about access token expiration!
 
 **Notice**: `endpass-node` client is not storing access tokens, you should solve it by
 yourself.

@@ -1,12 +1,11 @@
 const express = require('express');
-const { Client } = require('@endpass/endpass-node');
-
-const router = express.Router();
+const { EndpassClient } = require('@endpass/endpass-node');
 
 const ENDPASS_ACCESS_TOKEN = 'endpass-access-token';
 const ENDPASS_REFRESH_TOKEN = 'endpass-refresh-token';
 
-const c = new Client({
+const router = express.Router();
+const c = new EndpassClient({
   clientId: '593f4c87-a819-45e4-9f9a-218f8650de63',
   clientSecret: 'b1a53004-38ad-49f7-875b-1b5629a0a2d9',
   scopes: ['user:email:read', 'user:phone:read'],
@@ -25,14 +24,12 @@ router.get('/', async (req, res, next) => {
   }
 
   try {
-    const { email } = await c.request({
-      origin: req.headers.host,
-      path: '/user',
-      accessToken,
-    });
     const refreshedToken = await c.refresh(refreshToken);
+    const requester = c.createRequester(refreshedToken.accessToken);
+    const { email } = await requester.request('/user', req.headers.host);
 
     res.cookie(ENDPASS_ACCESS_TOKEN, refreshedToken.accessToken, {
+      expire: refreshedToken.expiresIn + Date.now(),
       httpOnly: true,
     });
     res.cookie(ENDPASS_REFRESH_TOKEN, refreshedToken.refreshToken, {
@@ -60,9 +57,10 @@ router.get('/handler', async (req, res, next) => {
   const { code } = req.query;
 
   try {
-    const { accessToken, refreshToken } = await c.exchange(code);
+    const { accessToken, refreshToken, expiresIn } = await c.exchange(code);
 
     res.cookie(ENDPASS_ACCESS_TOKEN, accessToken, {
+      expire: expiresIn + Date.now(),
       httpOnly: true,
     });
     res.cookie(ENDPASS_REFRESH_TOKEN, refreshToken, {

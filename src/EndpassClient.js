@@ -1,5 +1,6 @@
 const { OAuth2 } = require('oauth');
 const { OAUTH2_IDENTITY_URL, PUBLIC_API_BASE_URL } = require('./constants');
+const EndpassRequester = require('./EndpassRequester');
 
 /**
  * Authorization token object which can be recieved with exchange method
@@ -11,7 +12,7 @@ const { OAUTH2_IDENTITY_URL, PUBLIC_API_BASE_URL } = require('./constants');
  * @property {string} scope Scopes granted by token
  */
 
-class Client {
+class EndpassClient {
   /**
    * @param {string} options.clientId
    * @param {string} options.clientSecret
@@ -131,6 +132,8 @@ class Client {
    * const res = await c.request({ path: '/user', accessToken: 'access_token' })
    * // { email: 'example@email.com', phones: [] }
    * @param {object} params
+   * @param {string} [params.origin] The Host. Optionally needs for working in
+   *  some special environments, like localhost
    * @param {string} params.path Public API endpoint
    * @param {string} params.accessToken Access token string
    * @returns {Promise<object>} Request result
@@ -171,6 +174,10 @@ class Client {
       );
     });
   }
+
+  createRequester(accessToken) {
+    return new EndpassRequester({ client: this, accessToken });
+  }
 }
 
-module.exports = Client;
+module.exports = EndpassClient;

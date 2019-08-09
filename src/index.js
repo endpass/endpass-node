@@ -1,5 +1,5 @@
-const Client = require('./Client');
+const EndpassClient = require('./EndpassClient');
 
 module.exports = {
-  Client,
+  EndpassClient,
 };
