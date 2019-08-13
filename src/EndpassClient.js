@@ -1,5 +1,4 @@
 const { OAuth2 } = require('oauth');
-const { OAUTH2_IDENTITY_URL, PUBLIC_API_BASE_URL } = require('./constants');
 const EndpassRequester = require('./EndpassRequester');
 
 /**
@@ -19,7 +18,7 @@ class EndpassClient {
    * @param {string[]} options.scopes
    * @param {string} options.redirectUrl
    * @param {string} options.state
-   * @param {string} [options.publicApiUrl]
+   * @param {string} [options.apiUrl]
    * @param {string} [options.oauth2BaseUrl]
    */
   constructor({
@@ -28,19 +27,18 @@ class EndpassClient {
     scopes,
     redirectUrl,
     state,
-    publicApiUrl = PUBLIC_API_BASE_URL,
-    oauth2BaseUrl = OAUTH2_IDENTITY_URL,
+    apiUrl = 'https://api.endpass.com/v1',
   }) {
     this.state = state;
-    this.publicApiUrl = publicApiUrl;
+    this.apiUrl = apiUrl;
     this.redirectUrl = redirectUrl;
     this.scopes = scopes;
     this.oauth2 = new OAuth2(
       clientId,
       clientSecret,
-      oauth2BaseUrl,
-      '/api/v1.1/oauth/auth',
-      '/api/v1.1/oauth/token',
+      apiUrl,
+      '/oauth/auth',
+      '/oauth/token',
     );
   }
 
@@ -139,7 +137,7 @@ class EndpassClient {
    * @returns {Promise<object>} Request result
    */
   request({ origin, path, accessToken }) {
-    const requestPath = `${this.publicApiUrl}/${path.replace(/^\//, '')}`;
+    const requestPath = `${this.apiUrl}/${path.replace(/^\//, '')}`;
     const requestHeaders = {
       Authorization: `Bearer ${accessToken}`,
     };
