@@ -43,5 +43,8 @@
   },
   "dependencies": {
     "oauth": "^0.9.15"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
